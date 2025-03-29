@@ -1,11 +1,22 @@
+import { BrowserRouter, Routes, Route } from "react-router";
+import { Home } from "./components/Home";
+import { Leaderboards } from "./components/Leaderboards";
+import { AddEntry } from "./components/AddEntry";
+import { Profile } from "./components/Profile";
+import { Layout } from "./Layout";
+
 function App() {
 	return (
-		<>
-			<div className='bg-red-50'>
-				Yall ready for a hackathon
-				<span className='bg-blue-700'>aiusdgaisd</span>
-			</div>
-		</>
+		<BrowserRouter>
+			<Routes>
+				<Route path='/' element={<Layout />}>
+					<Route index element={<Home />} />
+					<Route path='leaderboards' element={<Leaderboards />} />
+					<Route path='add' element={<AddEntry />} />
+					<Route path='profile' element={<Profile />} />
+				</Route>
+			</Routes>
+		</BrowserRouter>
 	);
 }
 
