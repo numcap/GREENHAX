@@ -13,10 +13,14 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors()); // Enable CORS for any frontend requests
 
+// Root route
+app.get('/', (req, res) => {
+    res.send('Hello, World!');
+
 // Routes bcs we be like that (;
 app.use('/api', insightsRoutes);
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
