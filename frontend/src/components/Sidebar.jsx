@@ -2,7 +2,7 @@ import { IoMdHome } from "react-icons/io";
 import { MdLeaderboard } from "react-icons/md";
 import { IoMdAdd } from "react-icons/io";
 import { CgProfile } from "react-icons/cg";
-import { Link, NavLink } from "react-router";
+import { Link } from "react-router";
 
 export const Sidebar = () => {
 	return (
