@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 export const Sidebar = () => {
 	return (
-		<div className='flex flex-col justify-center items-center h-screen'>
+		<div className='flex flex-col justify-center items-center h-screen p-5 border-r border-r-gray-300'>
 			<span className='mb-12'>GreenHax</span>
 			<div className='flex flex-col items-baseline gap-4 text-[1.1rem]'>
 				<Link to='/'>
