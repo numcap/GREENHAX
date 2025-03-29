@@ -16,7 +16,7 @@ app.use(cors()); // Enable CORS for any frontend requests
 // Root route
 app.get('/', (req, res) => {
     res.send('Hello, World!');
-
+});
 // Routes bcs we be like that (;
 app.use('/api', insightsRoutes);
 
