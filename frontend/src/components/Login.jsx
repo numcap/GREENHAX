@@ -1,15 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 export const Login = () => {
+	const navigate = useNavigate();
 	const [userInfo, setUserInfo] = useState({
 		username: "",
 		password: "",
 	});
 
 	const handleSubmit = () => {
-		console.log(userInfo);
+		fetch("http://localhost:3000/api/login", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "include",
+			body: JSON.stringify(userInfo),
+		})
+			.then((res) => {
+				if (res.ok) {
+					res.json();
+					navigate("/");
+				}
+			})
+			.then((data) => {
+				if ("accessToken" in data) {
+					Cookies.set("accessToken", data.accessToken, { expires: 1 });
+				}
+			})
+			.catch((err) => {
+        console.log(err)
+			});
 	};
+
+	useEffect(() => {
+		console.log(userInfo);
+	}, [userInfo]);
 
 	return (
 		<div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-lg shadow-lg w-80'>
