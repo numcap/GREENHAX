@@ -20,9 +20,9 @@ export const Login = () => {
 		})
 			.then((res) => {
 				if (res.ok) {
-          navigate("/");
+					navigate("/");
 				}
-        return res.json();
+				return res.json();
 			})
 			.then((data) => {
 				if ("accessToken" in data) {
@@ -30,16 +30,34 @@ export const Login = () => {
 				}
 			})
 			.catch((err) => {
-        console.log(err)
+				console.log(err);
 			});
 	};
 
 	useEffect(() => {
-		console.log(userInfo);
-	}, [userInfo]);
+		async function authorize() {
+			const accessToken = Cookies.get("access_token");
+
+			const res = await fetch("http://localhost:3000/api/auth", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${accessToken}`,
+				},
+				credentials: "include",
+			});
+
+      if (res.ok) {
+        navigate("/")
+      }
+
+		}
+
+		authorize();
+	}, []);
 
 	return (
-		<div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-lg shadow-lg w-80'>
+    <div className='fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-8 rounded-lg shadow-lg w-80'>
 			<h2 className='text-2xl font-bold mb-6'>Login</h2>
 			<div className='flex flex-col gap-4'>
 				<div className='text-left'>
@@ -77,7 +95,7 @@ export const Login = () => {
 				</button>
 			</div>
 			<div className='mt-5'>
-				<p>Don't have an account with us?</p>
+				<p>Don't have an account?</p>
 				<Link
 					to='/signup'
 					className='text-blue-500 decoration-1 underline hover:text-blue-600 transition'
