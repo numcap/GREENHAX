@@ -21,7 +21,12 @@ const pool = new Pool({
 
 // Middleware setup
 app.use(express.json());
-app.use(cors()); // Enable CORS for any frontend requests
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : "http://localhost:5173", // my frontend URL
+    credentials: true,  // Allow credentials (cookies, authorization headers)
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+  })); // Enable CORS for any frontend requests
 app.use(cookieParser());
 
 // Root route
