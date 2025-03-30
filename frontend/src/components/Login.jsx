@@ -20,13 +20,13 @@ export const Login = () => {
 		})
 			.then((res) => {
 				if (res.ok) {
-					res.json();
-					navigate("/");
+          navigate("/");
 				}
+        return res.json();
 			})
 			.then((data) => {
 				if ("accessToken" in data) {
-					Cookies.set("accessToken", data.accessToken, { expires: 1 });
+					Cookies.set("access_token", data.accessToken, { expires: 1 });
 				}
 			})
 			.catch((err) => {
