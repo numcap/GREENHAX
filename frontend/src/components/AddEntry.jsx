@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './AddEntry.css'; // You'll need to create this CSS file
+import './AddEntry.css';
+import Cookies from 'js-cookie';
 
 export const AddEntry = () => {
   const navigate = useNavigate();
@@ -63,11 +64,15 @@ export const AddEntry = () => {
           })
       );
 
+      const accessToken = Cookies.get("access_token")
+
       const response = await fetch('http://localhost:3000/api/environmental-insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`
         },
+        credentials: "include",
         body: JSON.stringify(dataToSubmit),
       });
 
@@ -76,9 +81,9 @@ export const AddEntry = () => {
       }
 
       const result = await response.json();
-      // Store results in localStorage or state management and navigate to results page
-      localStorage.setItem('environmentalInsights', JSON.stringify(result));
-      navigate('/insights'); // Assuming you have a route for displaying results
+      console.log(result);
+      navigate("/")
+      
     } catch (err) {
       console.error('Error submitting form:', err);
       setError(err.message || 'Something went wrong');
@@ -354,7 +359,7 @@ export const AddEntry = () => {
 
         <div className="form-actions">
           <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? 'Calculating...' : 'Calculate Environmental Impact'}
+            {loading ? 'Calculating...' : 'Add New Entry'}
           </button>
         </div>
       </form>

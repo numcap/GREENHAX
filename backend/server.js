@@ -1,7 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
-// const insightsRoutes = require("./routes/insights");
+const insightsRoutes = require("./routes/insights");
 const bcrypt = require("bcrypt");
 const pg = require("pg");
 const jwt = require("jsonwebtoken");
@@ -21,12 +21,17 @@ const pool = new Pool({
 
 // Middleware setup
 app.use(express.json());
-app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : "http://localhost:5173", // my frontend URL
-    credentials: true,  // Allow credentials (cookies, authorization headers)
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })); // Enable CORS for any frontend requests
+app.use(
+	cors({
+		origin:
+			process.env.NODE_ENV === "production"
+				? process.env.FRONTEND_URL
+				: "http://localhost:5173", // my frontend URL
+		credentials: true, // Allow credentials (cookies, authorization headers)
+		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization"],
+	})
+); // Enable CORS for any frontend requests
 app.use(cookieParser());
 
 // Root route
@@ -34,7 +39,7 @@ app.get("/", (req, res) => {
 	res.send("Hello, World!");
 });
 // Routes bcs we be like that (;
-// app.use("/api", insightsRoutes);
+app.use("/api", insightsRoutes);
 
 app.post("/api/login", async (req, res) => {
 	const { username, password } = req.body;
@@ -115,9 +120,69 @@ app.post("/api/signup", async (req, res) => {
 	}
 });
 
-function authenticateToken(req, res, next) {
-	// const authHeader = req.headers["authorization"];
-}
+app.get("/api/home", authenticateToken, async (req, res) => {
+	const accessToken = req.headers["authorization"]?.split(" ")[1];
+
+	try {
+		const decodedJWT = jwt.decode(accessToken);
+        console.log(decodedJWT.dbID);
+        
+
+		const data = await pool.query("SELECT * FROM entries WHERE user_id=$1 ORDER BY created_at ASC", [
+			decodedJWT.dbID,
+		]);
+
+		if (data.rowCount === 0) {
+			return res.status(204).json({ error: "No Content" });
+		}
+
+        // console.log(data);
+
+		let totalCarbon = 0,
+			totalEnergy = 0,
+			totalEco = 0;
+		data.rows.forEach((row) => {
+			totalCarbon += row.carbon_footprint.value;
+			totalEnergy += row.energy_intensity_score.value;
+			totalEco += row.ecological_impact_score.value;
+		});
+
+		const avgCarbon = totalCarbon / data.rowCount;
+		const avgEnergy = totalEnergy / data.rowCount;
+		const avgEco = totalEco / data.rowCount;
+
+		return res.status(200).json({
+			average_carbon_footprint: avgCarbon,
+			average_energy_intensity_score: avgEnergy,
+			average_ecological_impact_score: avgEco,
+			data: data.rows,
+		});
+	} catch (err) {
+		console.log(err);
+
+		res.status(500).json({ err });
+	}
+});
+
+app.get("/api/leaderboards", authenticateToken, async (req, res) => {
+    try {
+		const result = await pool.query("SELECT * FROM users");
+
+		// Sort results into 3 separate leaderboards
+		const carbon = [...result.rows].sort((a, b) => a.avg_carbon_footprint - b.avg_carbon_footprint);
+		const energy = [...result.rows].sort((a, b) => b.avg_energy_intensity - a.avg_energy_intensity);
+		const impact = [...result.rows].sort((a, b) => b.avg_ecological_impact - a.avg_ecological_impact);
+
+		res.json({
+			carbonLeaderboard: carbon.map(u => ({ name: u.username, value: parseFloat(u.avg_carbon_footprint) })),
+			energyLeaderboard: energy.map(u => ({ name: u.username, value: parseFloat(u.avg_energy_intensity) })),
+			impactLeaderboard: impact.map(u => ({ name: u.username, value: parseFloat(u.avg_ecological_impact) }))
+		});
+	} catch (err) {
+		console.error("Leaderboard error:", err);
+		res.status(500).json({ error: "Could not load leaderboards" });
+	}
+})
 
 app.post("/api/auth", async (req, res) => {
 	const accessToken = req.headers["authorization"]?.split(" ")[1];
@@ -128,7 +193,6 @@ app.post("/api/auth", async (req, res) => {
 			"SELECT * FROM users WHERE reset_token = $1",
 			[refreshToken]
 		);
-        
 
 		// check if there is Access token
 		if (!accessToken) {
@@ -157,15 +221,79 @@ function generateNewAccessToken(res, refreshToken, user) {
 		// verify the refresh token, and sign a new access token to return
 		jwt.verify(refreshToken, process.env.REFRESH_JWT_SECRET);
 		const accessToken = jwt.sign(
-			{ username: user.rows[0].username, id: user.rows[0].id },
+			{ dbUser: user.rows[0].username, dbID: user.rows[0].id },
 			process.env.ACCESS_JWT_SECRET,
 			{ expiresIn: 60 * 60 * 24 }
 		);
-		return res.status(200).json({ accessToken })
+		return res.status(200).json({ accessToken });
 	} catch {
 		// if it throws an error then the refresh token could not be verified
-        return res.status(400).json({ error: "Could not verify Refresh Token" });
+		return res.status(400).json({ error: "Could not verify Refresh Token" });
+	}
+}
 
+// Middleware to authenticate token
+function authenticateToken(req, res, next) {
+	const authHeader = req.headers["authorization"];
+	const token = authHeader && authHeader.split(" ")[1];
+
+	if (token) {
+		jwt.verify(token, process.env.ACCESS_JWT_SECRET, (err, user) => {
+			if (!err) {
+				req.user = user;
+				return next();
+			}
+			// If access token is invalid, check for refresh token
+			const refreshToken = req.cookies["refresh_token"];
+			if (refreshToken) {
+				jwt.verify(
+					refreshToken,
+					process.env.REFRESH_JWT_SECRET,
+					(err, userFromRefresh) => {
+						if (!err) {
+							// Issue a new access token and attach user info
+							const newAccessToken = jwt.sign(
+								{ dbID: userFromRefresh.dbID, dbUser: userFromRefresh.dbUser },
+								process.env.ACCESS_JWT_SECRET,
+								{ expiresIn: "1d" }
+							);
+							req.user = userFromRefresh;
+							res.setHeader("x-access-token", newAccessToken);
+							return next();
+						} else {
+							return res.status(401).json({ error: "Unauthorized" });
+						}
+					}
+				);
+			} else {
+				return res.status(401).json({ error: "Unauthorized" });
+			}
+		});
+	} else {
+		// No access token, check for refresh token
+		const refreshToken = req.cookies["refresh_token"];
+		if (refreshToken) {
+			jwt.verify(
+				refreshToken,
+				process.env.REFRESH_JWT_SECRET,
+				(err, userFromRefresh) => {
+					if (!err) {
+						const newAccessToken = jwt.sign(
+							{ dbID: userFromRefresh.dbID, dbUser: userFromRefresh.dbUser },
+							process.env.ACCESS_JWT_SECRET,
+							{ expiresIn: "1d" }
+						);
+						req.user = userFromRefresh;
+						res.setHeader("x-access-token", newAccessToken);
+						return next();
+					} else {
+						return res.status(401).json({ error: "Unauthorized" });
+					}
+				}
+			);
+		} else {
+			return res.status(401).json({ error: "Unauthorized" });
+		}
 	}
 }
 
@@ -173,3 +301,5 @@ function generateNewAccessToken(res, refreshToken, user) {
 app.listen(PORT, () => {
 	console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+module.exports.authenticateToken = authenticateToken;
