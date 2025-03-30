@@ -41,6 +41,70 @@ app.get("/", (req, res) => {
 // Routes bcs we be like that (;
 app.use("/api", insightsRoutes);
 
+app.get("/api/getProfile", authenticateToken, async (req, res) => {
+	try {
+		const accessToken = req.headers["authorization"]?.split(" ")[1];
+
+		const decodedJWT = jwt.decode(accessToken);
+
+		const user = await pool.query("SELECT * FROM users WHERE id=$1", [
+			decodedJWT.dbID,
+		]);
+
+		console.log(user);
+		res.status(200).json(user.rows[0]);
+	} catch (err) {
+		console.log(err);
+		res.sendStatus(400);
+	}
+});
+
+app.post("/api/logout", authenticateToken, (req, res) => {
+    res.clearCookie("refresh_token", {
+		httpOnly: true,
+		secure: true,
+		sameSite: "None",
+		path: "/",
+	});
+	res.sendStatus(200);
+});
+
+app.post("/api/changePassword", authenticateToken, async (req, res) => {
+	const { currentPassword, newPassword } = req.body;
+
+	try {
+		// Fetch current user's password
+		const user = await pool.query(
+			"SELECT password_hash FROM users WHERE id=$1",
+			[req.user.dbID]
+		);
+
+		if (!user.rowCount) {
+			return res.status(404).json({ error: "User not found" });
+		}
+
+		const valid = await bcrypt.compare(
+			currentPassword,
+			user.rows[0].password_hash
+		);
+		if (!valid) {
+			return res.status(401).json({ error: "Current password is incorrect" });
+		}
+
+		// Hash and update new password
+		const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+		await pool.query("UPDATE users SET password_hash=$1 WHERE id=$2", [
+			hashedNewPassword,
+			req.user.dbID,
+		]);
+
+		res.status(200).json({ message: "Password updated successfully" });
+	} catch (err) {
+		console.error("Change password error:", err);
+		res.status(500).json({ error: "Server error" });
+	}
+});
+
 app.post("/api/login", async (req, res) => {
 	const { username, password } = req.body;
 
@@ -125,18 +189,18 @@ app.get("/api/home", authenticateToken, async (req, res) => {
 
 	try {
 		const decodedJWT = jwt.decode(accessToken);
-        console.log(decodedJWT.dbID);
-        
+		console.log(decodedJWT.dbID);
 
-		const data = await pool.query("SELECT * FROM entries WHERE user_id=$1 ORDER BY created_at ASC", [
-			decodedJWT.dbID,
-		]);
+		const data = await pool.query(
+			"SELECT * FROM entries WHERE user_id=$1 ORDER BY created_at ASC",
+			[decodedJWT.dbID]
+		);
 
 		if (data.rowCount === 0) {
 			return res.status(204).json({ error: "No Content" });
 		}
 
-        // console.log(data);
+		// console.log(data);
 
 		let totalCarbon = 0,
 			totalEnergy = 0,
@@ -165,24 +229,49 @@ app.get("/api/home", authenticateToken, async (req, res) => {
 });
 
 app.get("/api/leaderboards", authenticateToken, async (req, res) => {
-    try {
-		const result = await pool.query("SELECT * FROM users");
+	try {
+		const result = await pool.query(`
+			SELECT 
+				u.username,
+				AVG((e.carbon_footprint->>'value')::float) AS avg_carbon_footprint,
+				AVG((e.energy_intensity_score->>'value')::float) AS avg_energy_intensity,
+				AVG((e.ecological_impact_score->>'value')::float) AS avg_ecological_impact
+			FROM entries e
+			JOIN users u ON u.id = e.user_id
+			GROUP BY u.username
+		`);
 
-		// Sort results into 3 separate leaderboards
-		const carbon = [...result.rows].sort((a, b) => a.avg_carbon_footprint - b.avg_carbon_footprint);
-		const energy = [...result.rows].sort((a, b) => b.avg_energy_intensity - a.avg_energy_intensity);
-		const impact = [...result.rows].sort((a, b) => b.avg_ecological_impact - a.avg_ecological_impact);
+		const users = result.rows;
+
+		const carbon = [...users].sort(
+			(a, b) => a.avg_carbon_footprint - b.avg_carbon_footprint
+		);
+		const energy = [...users].sort(
+			(a, b) => b.avg_energy_intensity - a.avg_energy_intensity
+		);
+		const impact = [...users].sort(
+			(a, b) => b.avg_ecological_impact - a.avg_ecological_impact
+		);
 
 		res.json({
-			carbonLeaderboard: carbon.map(u => ({ name: u.username, value: parseFloat(u.avg_carbon_footprint) })),
-			energyLeaderboard: energy.map(u => ({ name: u.username, value: parseFloat(u.avg_energy_intensity) })),
-			impactLeaderboard: impact.map(u => ({ name: u.username, value: parseFloat(u.avg_ecological_impact) }))
+			carbonLeaderboard: carbon.map((u) => ({
+				name: u.username,
+				value: parseFloat(u.avg_carbon_footprint),
+			})),
+			energyLeaderboard: energy.map((u) => ({
+				name: u.username,
+				value: parseFloat(u.avg_energy_intensity),
+			})),
+			impactLeaderboard: impact.map((u) => ({
+				name: u.username,
+				value: parseFloat(u.avg_ecological_impact),
+			})),
 		});
 	} catch (err) {
 		console.error("Leaderboard error:", err);
 		res.status(500).json({ error: "Could not load leaderboards" });
 	}
-})
+});
 
 app.post("/api/auth", async (req, res) => {
 	const accessToken = req.headers["authorization"]?.split(" ")[1];
