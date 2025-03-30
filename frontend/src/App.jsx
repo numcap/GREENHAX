@@ -1,9 +1,11 @@
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Home } from "./components/Home";
 import { Leaderboards } from "./components/Leaderboards";
 import { AddEntry } from "./components/AddEntry";
 import { Profile } from "./components/Profile";
 import { Layout } from "./Layout";
+import { Login } from "./components/Login";
+import { Signup } from "./components/Signup";
 
 function App() {
 	return (
@@ -15,6 +17,8 @@ function App() {
 					<Route path='add' element={<AddEntry />} />
 					<Route path='profile' element={<Profile />} />
 				</Route>
+				<Route path='login' element={<Login />} />
+				<Route path='signup' element={<Signup />} />
 			</Routes>
 		</BrowserRouter>
 	);
