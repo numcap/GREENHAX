@@ -85,8 +85,8 @@ export const Home = () => {
 				</ResponsiveContainer>
 			</div>
 			<div>
-				{averageStats.map((stat) => (
-					<InsightEntry entry={stat} />
+				{averageStats.map((stat, index) => (
+					<InsightEntry entry={stat} key={index} />
 				))}
 			</div>
 		</div>
