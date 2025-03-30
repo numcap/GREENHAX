@@ -6,12 +6,20 @@ import { Profile } from "./components/Profile";
 import { Layout } from "./Layout";
 import { Login } from "./components/Login";
 import { Signup } from "./components/Signup";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
 	return (
 		<BrowserRouter>
 			<Routes>
-				<Route path='/' element={<Layout />}>
+				<Route
+					path='/'
+					element={
+						<ProtectedRoute>
+							<Layout />
+						</ProtectedRoute>
+					}
+				>
 					<Route index element={<Home />} />
 					<Route path='leaderboards' element={<Leaderboards />} />
 					<Route path='add' element={<AddEntry />} />

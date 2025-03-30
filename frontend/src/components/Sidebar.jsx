@@ -10,22 +10,22 @@ export const Sidebar = () => {
 			<span className='mb-12'>GreenHax</span>
 			<div className='flex flex-col items-baseline gap-4 text-[1.1rem]'>
 				<Link to='/'>
-					<span className='flex justify-center items-center gap-1.5'>
+					<span className='flex justify-center items-center gap-1.5 hover:bg-gray-200 rounded-2xl p-2 transition'>
 						<IoMdHome /> Home
 					</span>
 				</Link>
 				<Link to='/leaderboards'>
-					<span className='flex justify-center items-center gap-1.5'>
+					<span className='flex justify-center items-center gap-1.5 hover:bg-gray-200 rounded-2xl p-2 transition'>
 						<MdLeaderboard /> Leaderboards
 					</span>
 				</Link>
 				<Link to='/add'>
-					<span className='flex justify-center items-center gap-1.5'>
+					<span className='flex justify-center items-center gap-1.5 hover:bg-gray-200 rounded-2xl p-2 transition'>
 						<IoMdAdd /> Add
 					</span>
 				</Link>
 				<Link to='/profile'>
-					<span className='flex justify-center items-center gap-1.5'>
+					<span className='flex justify-center items-center gap-1.5 hover:bg-gray-200 rounded-2xl p-2 transition'>
 						<CgProfile /> Profile
 					</span>
 				</Link>
