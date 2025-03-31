@@ -1,4 +1,4 @@
-# Carbon eMissionary
+# Carbon eMission
 Track and reduce your carbon footprint with ease. Input your data, get instant results, and compete on the leaderboard to become the most eco-friendly user. Join the movement for a greener world!
 
 ## Inspiration
